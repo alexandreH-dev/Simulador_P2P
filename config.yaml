@@ -1,0 +1,21 @@
+nodes:
+  n1: [r1, r2]
+  n2: []
+  n3: [r5]
+  n4: []
+  n5: [r4]
+
+edges:
+  - [n1, n2]
+  - [n2, n3]
+  - [n3, n4]
+  - [n4, n5]
+  - [n5, n1]
+
+resources:
+  - r1
+  - r2
+  - r4
+  - r5
+
+min_degree: 1
