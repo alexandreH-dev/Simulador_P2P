@@ -17,14 +17,17 @@ def animate_search(G, history, found_at=None):
         nx.draw_networkx_edges(G, pos, ax=ax)
         nx.draw_networkx_labels(G, pos, ax=ax)
 
-        visited = history[:i+1]
-        path_nodes = [x[0] for x in visited]
+        visited_nodes = [node for node, _ in history[:i+1]]
+        colors = []
+        for node, found in history[:i+1]:
+            if found:
+                colors.append('green')
+            else:
+                colors.append('yellow')
 
-        # Color visited nodes
-        colors = ['green' if node == found_at else 'yellow' for node in path_nodes]
-        nx.draw_networkx_nodes(G, pos, nodelist=path_nodes, node_color=colors, ax=ax)
+        nx.draw_networkx_nodes(G, pos, nodelist=visited_nodes, node_color=colors, ax=ax)
 
-        ax.set_title(f"Step {i+1}/{len(history)}")
+        ax.set_title(f"Passo {i+1}/{len(history)}")
         ax.axis('off')
 
     ani = animation.FuncAnimation(fig, update, frames=len(history), interval=1000, repeat=False)
@@ -65,6 +68,8 @@ def flooding(G, start, target, ttl):
     queue = deque([(start, ttl)])
     messages = 0
     nodes = set()
+    found = False
+
     while queue:
         current, t = queue.popleft()
         if t < 0 or current in visited:
@@ -72,79 +77,64 @@ def flooding(G, start, target, ttl):
         visited.add(current)
         nodes.add(current)
         messages += 1
+
         if target in G.nodes[current]['resources'] or target in G.nodes[current]['cache']:
-            return messages, len(nodes)
+            print(f"[{messages}] Visitando nó '{current}': Recurso encontrado! ✅")
+            found = True
+            break
+        else:
+            print(f"[{messages}] Visitando nó '{current}': Recurso não encontrado ❌")
+
         for neighbor in G.neighbors(current):
-            queue.append((neighbor, t - 1))
+            if neighbor not in visited:
+                print(f"-> Enviando mensagem para vizinho '{neighbor}' (TTL={t-1})")
+                queue.append((neighbor, t - 1))
+
+    # Exibir nós que ficaram na fila mas não foram processados (opcional)
+    while queue:
+        current, _ = queue.popleft()
+        if current not in visited:
+            print(f"[-] Visitando nó '{current}': Recurso não encontrado ❌")
+
+    if not found:
+        print("Busca finalizada. Recurso não foi encontrado.")
     return messages, len(nodes)
 
-def informed_flooding(G, start, target, ttl):
-    visited = set()
-    queue = deque([(start, ttl)])
-    messages = 0
-    nodes = set()
-    while queue:
-        current, t = queue.popleft()
-        if t < 0 or current in visited:
-            continue
-        visited.add(current)
-        nodes.add(current)
-        messages += 1
-        if target in G.nodes[current]['resources'] or target in G.nodes[current]['cache']:
-            for node in visited:
-                G.nodes[node]['cache'].add(target)
-            return messages, len(nodes)
-        for neighbor in G.neighbors(current):
-            if target in G.nodes[neighbor]['cache']:
-                queue.appendleft((neighbor, t - 1))
-            else:
-                queue.append((neighbor, t - 1))
-    return messages, len(nodes)
 
 def random_walk(G, start, target, ttl, visualize=False):
     current = start
     messages = 0
     visited = set()
-    history = [(current,)]
+    history = [(current, False)]  # (nó, achou?)
 
-    for _ in range(ttl + 1):
+    for step in range(ttl + 1):
         messages += 1
         visited.add(current)
-        if target in G.nodes[current]['resources'] or target in G.nodes[current]['cache']:
+
+        found = target in G.nodes[current]['resources'] or target in G.nodes[current]['cache']
+        if found:
+            print(f"[{messages}] Visitando nó '{current}': Recurso encontrado! ✅")
+            history[-1] = (current, True)  # Atualiza o status de achado
             if visualize:
                 animate_search(G, history, found_at=current)
             return messages, len(visited)
-        neighbors = list(G.neighbors(current))
+        else:
+            print(f"[{messages}] Visitando nó '{current}': Recurso não encontrado ❌")
+
+        neighbors = [n for n in G.neighbors(current) if n not in visited]
         if not neighbors:
+            print(f"-> Nenhum vizinho novo para visitar a partir de '{current}'. Encerrando.")
             break
-        current = random.choice(neighbors)
-        history.append((current,))
+
+        next_node = random.choice(neighbors)
+        print(f"-> Escolhendo vizinho '{next_node}' para próxima visita (TTL restante: {ttl - step})")
+        current = next_node
+        history.append((current, False))
 
     if visualize:
         animate_search(G, history)
-    return messages, len(visited)
 
-
-def informed_random_walk(G, start, target, ttl):
-    current = start
-    messages = 0
-    visited = set()
-    for _ in range(ttl + 1):
-        messages += 1
-        visited.add(current)
-        if target in G.nodes[current]['resources'] or target in G.nodes[current]['cache']:
-            for node in visited:
-                G.nodes[node]['cache'].add(target)
-            return messages, len(visited)
-        neighbors = list(G.neighbors(current))
-        random.shuffle(neighbors)
-        informed = [n for n in neighbors if target in G.nodes[n]['cache']]
-        if informed:
-            current = informed[0]
-        elif neighbors:
-            current = neighbors[0]
-        else:
-            break
+    print("Busca finalizada. Recurso não foi encontrado.")
     return messages, len(visited)
 
 def main():
@@ -153,7 +143,7 @@ def main():
     parser.add_argument("--node", required=True)
     parser.add_argument("--resource", required=True)
     parser.add_argument("--ttl", type=int, required=True)
-    parser.add_argument("--algo", choices=["flooding", "informed_flooding", "random_walk", "informed_random_walk"], required=True)
+    parser.add_argument("--algo", choices=["flooding", "random_walk"], required=True)
     parser.add_argument("--visualize", action="store_true")
     args = parser.parse_args()
 
@@ -163,17 +153,19 @@ def main():
 
     algos = {
         "flooding": flooding,
-        "informed_flooding": informed_flooding,
-        "random_walk": random_walk,
-        "informed_random_walk": informed_random_walk
+        "random_walk": random_walk
     }
 
-    # messages, nodes = algos[args.algo](G, args.node, args.resource, args.ttl)
-    messages, nodes = algos[args.algo](G, args.node, args.resource, args.ttl, visualize=args.visualize)
+    # Execução do algoritmo
+    if args.algo == "random_walk":
+        messages, nodes = algos[args.algo](G, args.node, args.resource, args.ttl, visualize=args.visualize)
+    else:
+        messages, nodes = algos[args.algo](G, args.node, args.resource, args.ttl)
 
-    print(f"Algorithm: {args.algo}")
-    print(f"Messages exchanged: {messages}")
-    print(f"Nodes involved: {nodes}")
+    print("\n===== RESULTADO FINAL =====")
+    print(f"Algoritmo: {args.algo}")
+    print(f"Mensagens trocadas: {messages}")
+    print(f"Nós envolvidos: {nodes}")
 
 if __name__ == "__main__":
     main()

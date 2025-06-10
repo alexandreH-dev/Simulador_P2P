@@ -5,9 +5,7 @@ Este projeto implementa quatro algoritmos de busca para sistemas peer-to-peer (P
 ## 📌 Algoritmos Implementados
 
 - 🔁 Flooding  
-- 🧠 Informed Flooding (com cache de recursos)  
 - 🎲 Random Walk  
-- 🧭 Informed Random Walk (prioriza nós com cache)  
 
 Cada algoritmo respeita o parâmetro TTL (Time-To-Live), limitando o número de saltos permitidos na rede.
 
@@ -56,6 +54,32 @@ edges:
 resources:
   - r1
   - r2
+
+min_degree: 1
+```
+```yaml
+nodes:
+  n1: [r1]
+  n2: [r2]
+  n3: [r3]
+  n4: [r4]
+  n5: [r5]
+  n6: [r6]
+
+edges:
+  - [n1, n2]
+  - [n2, n3]
+  - [n2, n4]
+  - [n3, n6]
+  - [n3, n5]
+
+resources:
+  - r1
+  - r2
+  - r3
+  - r4
+  - r5
+  - r6
 
 min_degree: 1
 ```
