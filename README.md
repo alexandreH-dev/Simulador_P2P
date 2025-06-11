@@ -87,11 +87,11 @@ min_degree: 1
 ## 🚀 Como Executar
 ### 🔍 Execução padrão
 ```bash
-python p2p_search.py config.yaml --node n1 --resource r2 --ttl 5 --algo informed_flooding
+python p2p_search.py config.yaml --node n1 --resource r3 --ttl 3 --algo flooding
 ```
 ### 🎞️ Execução com visualização animada
 ```bash
-python p2p_search.py config.yaml --node n1 --resource r2 --ttl 5 --algo random_walk --visualize
+python p2p_search.py config.yaml --node n1 --resource r3 --ttl 3 --algo random_walk --visualize
 ```
 
 --- 
