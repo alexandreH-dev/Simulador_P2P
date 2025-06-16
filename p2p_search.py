@@ -33,7 +33,6 @@ def animate_search(G, history, found_at=None):
     ani = animation.FuncAnimation(fig, update, frames=len(history), interval=1000, repeat=False)
     plt.show()
 
-
 def load_config(path):
     with open(path, 'r') as f:
         if path.endswith('.yaml') or path.endswith('.yml'):
@@ -99,7 +98,6 @@ def flooding(G, start, target, ttl):
     if not found:
         print("Busca finalizada. Recurso não foi encontrado.")
     return messages, len(nodes)
-
 
 def random_walk(G, start, target, ttl, visualize=False):
     current = start
