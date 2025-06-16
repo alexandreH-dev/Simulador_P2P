@@ -86,7 +86,11 @@ def flooding(G, start, target, ttl):
 
         for neighbor in G.neighbors(current):
             if neighbor not in visited:
-                print(f"-> Enviando mensagem para vizinho '{neighbor}' (TTL={t-1})")
+                if t == 0:
+                    print(f"Parou com TTL = {0}")
+                else:
+                    print(f"-> Enviando mensagem para vizinho '{neighbor}' (TTL={t})")
+                    
                 queue.append((neighbor, t - 1))
 
     # Exibir nós que ficaram na fila mas não foram processados (opcional)
@@ -103,7 +107,8 @@ def random_walk(G, start, target, ttl, visualize=False):
     current = start
     messages = 0
     visited = set()
-    history = [(current, False)]  # (nó, achou?)
+    path_stack = [current]  # Caminho percorrido
+    history = [(current, False)]  # Para visualização
 
     for step in range(ttl + 1):
         messages += 1
@@ -112,22 +117,31 @@ def random_walk(G, start, target, ttl, visualize=False):
         found = target in G.nodes[current]['resources'] or target in G.nodes[current]['cache']
         if found:
             print(f"[{messages}] Visitando nó '{current}': Recurso encontrado! ✅")
-            history[-1] = (current, True)  # Atualiza o status de achado
+            history[-1] = (current, True)
             if visualize:
                 animate_search(G, history, found_at=current)
             return messages, len(visited)
-        else:
-            print(f"[{messages}] Visitando nó '{current}': Recurso não encontrado ❌")
 
+        print(f"[{messages}] Visitando nó '{current}': Recurso não encontrado ❌")
+
+        # Vizinhos ainda não visitados
         neighbors = [n for n in G.neighbors(current) if n not in visited]
-        if not neighbors:
-            print(f"-> Nenhum vizinho novo para visitar a partir de '{current}'. Encerrando.")
-            break
 
-        next_node = random.choice(neighbors)
-        print(f"-> Escolhendo vizinho '{next_node}' para próxima visita (TTL restante: {ttl - step})")
-        current = next_node
-        history.append((current, False))
+        if neighbors:
+            next_node = random.choice(neighbors)
+            print(f"-> Escolhendo vizinho '{next_node}' para próxima visita (TTL restante: {ttl - step})")
+            path_stack.append(next_node)
+            current = next_node
+            history.append((current, False))
+        else:
+            # Backtrack
+            print(f"-> Sem vizinhos não visitados em '{current}'. Fazendo caminho de volta...")
+            path_stack.pop()  # Remove o nó atual da pilha
+            if not path_stack:
+                print("-> Caminho de volta esgotado. Encerrando busca.")
+                break
+            current = path_stack[-1]
+            history.append((current, False))
 
     if visualize:
         animate_search(G, history)
@@ -162,7 +176,7 @@ def main():
 
     print("\n===== RESULTADO FINAL =====")
     print(f"Algoritmo: {args.algo}")
-    print(f"Mensagens trocadas: {messages}")
+    print(f"Mensagens trocadas: {messages-1}")
     print(f"Nós envolvidos: {nodes}")
 
 if __name__ == "__main__":
